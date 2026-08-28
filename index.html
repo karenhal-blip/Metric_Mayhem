@@ -1,0 +1,2562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monster Metrics Mayhem · Benefits Party Game</title>
+  <meta name="description" content="Multiplayer guessing game for the Global Benefits Dashboard — guess the metrics, earn points, learn the data.">
+  <style>
+    :root {
+      --midnight-blue: #07182D;
+      --cisco-blue: #02C8FF;
+      --medium-blue: #0A60FF;
+      --accent-magenta: #FF007F;
+      --accent-orange: #FF9000;
+      --cisco-green: #02C8FF;
+      --cisco-yellow: #FF9000;
+      --cisco-red: #FF007F;
+      --jb-purple: #0A60FF;
+      --jb-purple-dark: #07182D;
+      --jb-orange: #FF9000;
+      --jb-teal: #02C8FF;
+      --jb-yellow: #FF9000;
+      --jb-pink: #FF007F;
+      --jb-blue: #0A60FF;
+      --bg-dark: #07182D;
+      --bg-card: #0a2544;
+      --border: rgba(2, 200, 255, 0.18);
+      --text-primary: #ffffff;
+      --text-secondary: #cceef8;
+      --text-muted: #6da8c4;
+      --font: 'Segoe UI', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius: 20px;
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      height: 100%;
+    }
+    html, body {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    body {
+      background: var(--bg-dark);
+      overflow-x: hidden;
+      min-height: 100%;
+    }
+    @media (min-width: 1024px) {
+      body {
+        height: 100dvh;
+        min-height: 100dvh;
+        max-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      body.player-mode {
+        height: auto;
+        min-height: 100dvh;
+        max-height: none;
+        overflow: auto;
+      }
+      body.player-mode .app-layout,
+      body.player-mode .shell,
+      body.player-mode .screen.active {
+        overflow: visible;
+        flex: none;
+        min-height: auto;
+      }
+    }
+    body.party-mode {
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255, 144, 0, 0.16), transparent 40%),
+        radial-gradient(circle at 85% 15%, rgba(2, 200, 255, 0.14), transparent 35%),
+        radial-gradient(circle at 50% 90%, rgba(10, 96, 255, 0.22), transparent 45%),
+        var(--bg-dark);
+    }
+    body.reveal-flash::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 144, 0, 0.28);
+      pointer-events: none;
+      z-index: 500;
+      animation: flashOut 0.7s ease-out forwards;
+    }
+    @keyframes flashOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    /* Header */
+    .brandbar {
+      background: rgba(0,0,0,0.35);
+      border-bottom: none;
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .brandbar-logo {
+      font-weight: 900;
+      font-size: 18px;
+      color: var(--jb-teal);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .brandbar-divider { width: 1px; height: 22px; background: rgba(255,255,255,0.2); }
+    .brandbar-title { font-size: 13px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+    .brandbar-spacer { flex: 1; }
+    .brandbar-link {
+      font-size: 12px;
+      color: var(--cisco-blue);
+      text-decoration: none;
+      opacity: 0.85;
+    }
+    .brandbar-link:hover { opacity: 1; text-decoration: underline; }
+
+    .shell { flex: 1; min-width: 0; min-height: 0; max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+    .app-layout {
+      display: flex;
+      gap: 16px;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 12px 16px 16px;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    @media (max-width: 1023px) {
+      .app-layout { overflow: visible; padding: 20px 16px 48px; }
+      .shell { overflow: visible; min-height: auto; }
+    }
+    @media (max-width: 960px) {
+      .app-layout { flex-direction: column; }
+    }
+
+    .host-sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .host-sidebar.is-hidden { display: none; }
+    @media (min-width: 1024px) {
+      .host-sidebar .sidebar-card {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .host-sidebar .sidebar-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+    }
+    @media (max-width: 960px) {
+      .host-sidebar { width: 100%; position: static; order: -1; }
+    }
+
+    .sidebar-card {
+      background: var(--bg-card);
+      border: 3px solid var(--jb-purple);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+    }
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--jb-yellow);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .sidebar-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .sidebar-row {
+      display: grid;
+      grid-template-columns: 24px 34px 1fr auto;
+      gap: 6px;
+      align-items: center;
+      padding: 7px 6px;
+      border-bottom: 1px solid rgba(30, 58, 95, 0.5);
+      font-size: 12px;
+    }
+    .sidebar-row:last-child { border-bottom: none; }
+    .sidebar-row.leader { background: rgba(2, 200, 255, 0.1); border-radius: 6px; }
+    .sidebar-rank {
+      font-weight: 800;
+      color: var(--cisco-blue);
+      text-align: center;
+    }
+    .sidebar-rank.gold { color: #ffd700; }
+    .sidebar-rank.silver { color: #c0c0c0; }
+    .sidebar-rank.bronze { color: #cd7f32; }
+    .sidebar-name {
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sidebar-pts {
+      font-weight: 900;
+      color: var(--jb-teal);
+      font-variant-numeric: tabular-nums;
+    }
+    .sidebar-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--pc, var(--jb-teal));
+    }
+    .sidebar-empty {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 12px 4px;
+      line-height: 1.5;
+    }
+
+    /* Screens */
+    .screen { display: none; animation: fadeIn 0.35s ease; min-height: 0; }
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    @media (max-width: 1023px) {
+      .screen.active { display: block; overflow: visible; flex: none; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Landing — Jackbox title screen */
+    .hero { text-align: center; padding: 16px 0 24px; }
+    @media (min-width: 1024px) {
+      #screen-landing.active {
+        justify-content: center;
+        overflow-y: auto;
+      }
+      .hero { padding: 8px 0 20px; }
+    }
+    .hero-badge {
+      display: inline-block;
+      background: var(--accent-orange);
+      color: var(--midnight-blue);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 18px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+      transform: rotate(-2deg);
+      box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+    }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 52px);
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 8px;
+      color: #fff;
+      text-shadow: 4px 4px 0 var(--medium-blue), 8px 8px 0 rgba(255, 144, 0, 0.4);
+      letter-spacing: -0.02em;
+    }
+    .hero .hero-sub {
+      font-size: clamp(18px, 3vw, 24px);
+      font-weight: 700;
+      color: var(--jb-teal);
+      margin-bottom: 16px;
+    }
+    .hero p { color: var(--text-muted); font-size: 15px; max-width: 480px; margin: 0 auto 24px; }
+
+    .landing-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 8px;
+    }
+
+    .chaos-scene {
+      position: relative;
+      height: clamp(160px, 28vw, 240px);
+      margin: 0 auto 20px;
+      max-width: 820px;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .chaos-num {
+      position: absolute;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+      text-shadow: 1px 1px 0 var(--midnight-blue), 2px 2px 0 var(--midnight-blue);
+      animation: chaosDrift 4s ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+      z-index: 1;
+    }
+    .chaos-monster {
+      position: absolute;
+      animation: chaosWobble 3s ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+      z-index: 2;
+    }
+    .chaos-monster .animal-avatar-wrap.size-md { --av-size: 48px; }
+    .chaos-monster .animal-avatar-wrap.size-lg { --av-size: 64px; }
+    .chaos-monster .animal-avatar-wrap.size-xl { --av-size: 80px; }
+    @media (min-width: 600px) {
+      .chaos-monster .animal-avatar-wrap.size-md { --av-size: 56px; }
+      .chaos-monster .animal-avatar-wrap.size-lg { --av-size: 72px; }
+      .chaos-monster .animal-avatar-wrap.size-xl { --av-size: 92px; }
+    }
+    @keyframes chaosDrift {
+      0%, 100% { transform: translate(0, 0) rotate(var(--rot, 0deg)) scale(1); }
+      33% { transform: translate(6px, -8px) rotate(calc(var(--rot, 0deg) + 6deg)) scale(1.05); }
+      66% { transform: translate(-5px, 6px) rotate(calc(var(--rot, 0deg) - 5deg)) scale(0.96); }
+    }
+    @keyframes chaosWobble {
+      0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+      50% { transform: translateY(-14px) rotate(calc(var(--rot, 0deg) + 8deg)); }
+    }
+
+    .monster-parade {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 4px;
+      margin-bottom: 12px;
+      min-height: 64px;
+      flex-wrap: wrap;
+    }
+    .parade-monster {
+      animation: paradeBounce 2.2s ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+    }
+    .parade-monster .animal-avatar-wrap.size-xl { --av-size: 52px; }
+    @media (min-width: 600px) {
+      .parade-monster .animal-avatar-wrap.size-xl { --av-size: 64px; }
+      .monster-parade { gap: 8px; }
+    }
+    @keyframes paradeBounce {
+      0%, 100% { transform: translateY(0) scale(1) rotate(var(--tilt, 0deg)); }
+      50% { transform: translateY(-12px) scale(1.08) rotate(calc(var(--tilt, 0deg) + 6deg)); }
+    }
+
+    .mode-cards { display: grid; grid-template-columns: 1fr; gap: 16px; max-width: 320px; margin: 0 auto; }
+
+    .mode-card {
+      background: var(--bg-card);
+      border: 3px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 20px 18px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+    .mode-card:hover {
+      border-color: var(--jb-teal);
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 16px 48px rgba(2, 200, 255, 0.22);
+    }
+    .mode-card-icon { font-size: 36px; margin-bottom: 10px; }
+    .mode-card-monster .animal-avatar-wrap { --av-size: 52px; margin: 0 auto 10px; display: block; }
+    .mode-card h2 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .mode-card p { color: var(--text-muted); font-size: 13px; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 3px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 0;
+      box-shadow: var(--shadow);
+      min-height: 0;
+    }
+    @media (min-width: 1024px) {
+      .screen .card,
+      .screen .card-accent {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .card-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+    }
+    .card-accent { border-color: var(--jb-orange); }
+
+    /* Jackbox room code letter boxes */
+    .room-code-boxes {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .code-letter {
+      width: 48px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--midnight-blue);
+      background: var(--accent-orange);
+      border-radius: 12px;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.35);
+      animation: letterPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+      animation-delay: calc(var(--i, 0) * 0.08s);
+    }
+    @keyframes letterPop {
+      from { transform: scale(0) rotate(-10deg); opacity: 0; }
+      to { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .room-code-label {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+    }
+
+    /* Phase banner — Jackbox style */
+    .phase-banner {
+      text-align: center;
+      font-size: clamp(12px, 1.8vw, 16px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--jb-yellow);
+      background: rgba(0,0,0,0.35);
+      padding: 8px 16px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+      animation: bannerPulse 2s ease infinite;
+    }
+    .phase-banner.reveal { color: var(--jb-teal); animation: none; font-size: clamp(14px, 2vw, 18px); }
+    @keyframes bannerPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    /* Player tiles — lobby */
+    .player-tiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0;
+      list-style: none;
+      padding: 0;
+    }
+    .player-tile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,0,0,0.25);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 999px;
+      padding: 4px 12px 4px 4px;
+      animation: tileIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes tileIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .player-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--pc, var(--jb-teal));
+      color: var(--midnight-blue);
+      font-weight: 900;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .player-tile-name { font-weight: 700; font-size: 12px; }
+
+    /* Flat cartoon monster sprite avatars (monster-icons.png) */
+    .animal-avatar-wrap {
+      position: relative;
+      flex-shrink: 0;
+      display: inline-block;
+      width: var(--av-size);
+      height: var(--av-size);
+    }
+    .animal-avatar-wrap.size-sm { --av-size: 44px; }
+    .animal-avatar-wrap.size-md { --av-size: 52px; }
+    .animal-avatar-wrap.size-lg { --av-size: 64px; }
+    .animal-avatar-wrap.size-xl { --av-size: 72px; }
+    .sprite-avatar {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: #fff;
+      background-repeat: no-repeat;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+    }
+
+    .player-tile .animal-avatar-wrap { --av-size: 40px; }
+    .guess-chip .animal-avatar-wrap { --av-size: 56px; margin: 0 auto 6px; display: block; }
+    .sidebar-animal .animal-avatar-wrap { --av-size: 30px; }
+    .player-you-bar .animal-avatar-wrap { --av-size: 52px; }
+
+    .join-status {
+      text-align: center;
+      color: var(--jb-teal);
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 10px;
+      display: none;
+    }
+    .join-status.show { display: block; }
+
+    /* Player phone — "you" bar */
+    .player-you-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .player-you-bar .player-avatar { width: 44px; height: 44px; font-size: 15px; }
+    .player-you-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+    .player-you-name { font-size: 18px; font-weight: 900; }
+
+    .lobby-waiting {
+      width: 100%;
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 24px;
+      animation: pulse 2s ease infinite;
+    }
+    .lobby-title {
+      text-align: center;
+      font-size: clamp(18px, 3vw, 24px);
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    /* Lobby — two-column on laptop */
+    .lobby-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      flex: 1;
+    }
+    @media (min-width: 1024px) {
+      .lobby-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+        gap: 14px;
+        align-items: start;
+      }
+      .lobby-main { min-width: 0; }
+      .lobby-join { min-width: 0; }
+    }
+    .lobby-actions {
+      flex-shrink: 0;
+      margin-top: auto;
+      padding-top: 8px;
+    }
+    .lobby-tip {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    @media (min-width: 1024px) {
+      .lobby-tip { display: none; }
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 16px;
+      font-family: inherit;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--cisco-blue);
+      box-shadow: 0 0 0 3px rgba(2, 200, 255, 0.22);
+    }
+    .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    @media (max-width: 500px) { .input-row { grid-template-columns: 1fr; } }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: inherit;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+    }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.35); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--accent-orange); color: var(--midnight-blue); }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text-primary); border: 2px solid rgba(2, 200, 255, 0.25); box-shadow: none; }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--cisco-blue); color: var(--cisco-blue); }
+    .btn-success { background: var(--cisco-blue); color: var(--midnight-blue); }
+    .btn-jumbo { font-size: 16px; padding: 14px 28px; width: 100%; max-width: 360px; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .btn-compact { padding: 10px 18px; font-size: 13px; }
+
+    /* Question display */
+    .question-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .pill {
+      display: inline-flex;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 999px;
+      background: rgba(2, 200, 255, 0.12);
+      color: var(--cisco-blue);
+    }
+    .pill.warning { background: rgba(255, 144, 0, 0.15); color: var(--accent-orange); }
+    .pill.success { background: rgba(2, 200, 255, 0.15); color: var(--cisco-blue); }
+
+    .question-text {
+      font-size: clamp(18px, 2.8vw, 26px);
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .question-hint {
+      color: var(--jb-teal);
+      font-size: 13px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* Question layout — side-by-side on laptop */
+    .question-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .question-head {
+      flex-shrink: 0;
+    }
+    @media (min-width: 1024px) {
+      .question-head-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        align-items: start;
+      }
+      .question-head-row .timer-wrap {
+        margin-bottom: 0;
+        min-width: 100px;
+      }
+    }
+    .question-play {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .guesses-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .timer-wrap { text-align: center; margin-bottom: 12px; flex-shrink: 0; }
+    .timer-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.15);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--jb-yellow);
+      margin-bottom: 8px;
+      transition: color 0.3s, border-color 0.3s, transform 0.3s;
+    }
+    .timer-circle.urgent {
+      color: var(--jb-pink);
+      border-color: var(--jb-pink);
+      animation: timerShake 0.5s ease infinite;
+    }
+    @keyframes timerShake {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .timer-bar {
+      height: 6px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .timer-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--jb-orange), var(--jb-yellow), var(--jb-teal));
+      border-radius: 999px;
+      transition: width 1s linear;
+    }
+    .timer-label { font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+
+    /* Guesses grid */
+    .guesses-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .guess-chip {
+      background: rgba(0,0,0,0.3);
+      border: 2px solid var(--pc, rgba(255,255,255,0.15));
+      border-radius: 12px;
+      padding: 8px 6px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .guess-chip.locked {
+      border-color: var(--pc, var(--jb-teal));
+      transform: scale(1.03);
+      box-shadow: 0 0 20px color-mix(in srgb, var(--pc, var(--jb-teal)) 40%, transparent);
+    }
+    .guess-chip .name { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 2px; }
+    .guess-chip .value { font-size: 18px; font-weight: 900; color: #fff; }
+    .guess-chip .value.pending { font-size: 22px; opacity: 0.35; }
+    .guess-chip.winner {
+      border-color: var(--jb-yellow);
+      background: rgba(255, 144, 0, 0.15);
+      animation: winnerBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .guess-chip.winner .value { color: var(--jb-yellow); }
+    @keyframes winnerBounce {
+      0% { transform: scale(0.8); }
+      60% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .guess-chip .pts-pop {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--jb-teal);
+      margin-top: 6px;
+    }
+
+    /* Reveal */
+    .reveal-answer {
+      text-align: center;
+      padding: 12px 8px;
+    }
+    .reveal-label {
+      font-size: clamp(13px, 2vw, 16px);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--jb-teal);
+      margin-bottom: 8px;
+    }
+    .reveal-value {
+      font-size: clamp(40px, 8vw, 64px);
+      font-weight: 900;
+      color: var(--accent-orange);
+      line-height: 1;
+      text-shadow: 3px 3px 0 var(--midnight-blue);
+      animation: revealSlam 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes revealSlam {
+      0% { transform: scale(2.5) rotate(-5deg); opacity: 0; }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    .fun-fact {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: rgba(2, 200, 255, 0.1);
+      border: 2px solid rgba(2, 200, 255, 0.28);
+      border-radius: 12px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* Leaderboard */
+    .leaderboard { width: 100%; border-collapse: collapse; }
+    .leaderboard th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .leaderboard td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(30, 58, 95, 0.5);
+      font-size: 13px;
+    }
+    @media (min-width: 1024px) {
+      .leaderboard-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      #screen-host-leaderboard .card,
+      #screen-host-final .card {
+        text-align: center;
+      }
+      #screen-host-final > .card > div:first-child { font-size: 48px !important; margin-bottom: 8px !important; }
+      #screen-host-final h2 { font-size: 24px !important; margin-bottom: 4px !important; }
+      #final-winner { font-size: 18px !important; margin-bottom: 12px !important; }
+    }
+    .leaderboard tr:last-child td { border-bottom: none; }
+    .leaderboard tr.leader td { background: rgba(2, 200, 255, 0.1); }
+    .rank { font-weight: 800; color: var(--cisco-blue); width: 36px; }
+    .rank.gold { color: #ffd700; }
+    .rank.silver { color: #c0c0c0; }
+    .rank.bronze { color: #cd7f32; }
+    .points { font-weight: 700; color: var(--cisco-green); text-align: right; }
+    .points-delta { font-size: 12px; color: var(--cisco-green); }
+
+    /* Player waiting */
+    .status-msg {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .status-msg .icon { font-size: 48px; margin-bottom: 16px; }
+    .pulse { animation: pulse 2s ease infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Confetti */
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 999;
+    }
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      animation: confettiFall 3s ease-out forwards;
+    }
+    @keyframes confettiFall {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    .progress-dots {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s, transform 0.3s;
+    }
+    .dot.done { background: var(--cisco-green); }
+    .dot.current { background: var(--cisco-blue); transform: scale(1.3); }
+
+    .manual-entry { margin-top: 8px; padding-top: 0; border-top: none; flex-shrink: 0; }
+    .manual-entry details {
+      background: rgba(0,0,0,0.2);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+    .manual-entry summary {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      list-style: none;
+    }
+    .manual-entry summary::-webkit-details-marker { display: none; }
+    .manual-entry summary::before { content: '▸ '; }
+    .manual-entry details[open] summary::before { content: '▾ '; }
+    .manual-entry .input-row { margin-top: 10px; margin-bottom: 10px; }
+    .manual-entry .btn { margin-top: 4px; }
+
+    .connection-status {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .connection-status.online { background: rgba(2, 200, 255, 0.15); color: var(--cisco-blue); }
+    .connection-status.offline { background: rgba(255, 144, 0, 0.15); color: var(--accent-orange); }
+    .connection-status .dot-live {
+      width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    }
+    .connection-status.online .dot-live { animation: pulse 1.5s ease infinite; }
+
+    .player-count { font-size: 13px; color: var(--text-muted); }
+
+    #screen-host-lobby .player-tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 8px;
+    }
+    #screen-host-lobby .player-tile { min-width: 0; }
+    #screen-host-lobby .player-tile-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    #screen-host-lobby .lobby-waiting { grid-column: 1 / -1; }
+
+    .join-instructions {
+      background: rgba(2, 200, 255, 0.08);
+      border: 1px solid rgba(2, 200, 255, 0.25);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin: 0;
+    }
+    .join-instructions h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--cisco-blue);
+      margin-bottom: 8px;
+    }
+    .join-steps {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .join-steps li { margin-bottom: 2px; }
+    .join-steps-compact { list-style: none; padding-left: 0; }
+    .join-steps-compact li::before { content: '• '; color: var(--jb-teal); }
+    @media (min-width: 1024px) {
+      .join-steps-verbose { display: none; }
+    }
+    @media (max-width: 1023px) {
+      .join-steps-compact { display: none; }
+    }
+    .join-steps strong { color: var(--text-primary); }
+    .join-link-box {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .join-link-box input {
+      flex: 1;
+      min-width: 140px;
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      padding: 8px 10px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+    }
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--cisco-blue);
+      color: var(--midnight-blue);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+      z-index: 1000;
+    }
+    .copy-toast.show { opacity: 1; }
+
+    .join-qr-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .qr-wrap {
+      flex-shrink: 0;
+      text-align: center;
+      background: #fff;
+      padding: 8px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    .qr-wrap #join-qrcode img,
+    .qr-wrap #join-qrcode canvas {
+      display: block;
+      margin: 0 auto;
+      width: 120px !important;
+      height: 120px !important;
+    }
+    .qr-caption {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .question-actions {
+      flex-shrink: 0;
+      padding-top: 8px;
+    }
+    .locked-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    @media (min-width: 1024px) {
+      #screen-host-lobby .card {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .lobby-grid {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      #screen-host-lobby .lobby-grid {
+        align-items: stretch;
+      }
+      #screen-host-lobby .lobby-main {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1;
+      }
+      #screen-host-lobby .lobby-header {
+        flex-shrink: 0;
+      }
+      #screen-host-lobby .player-count {
+        flex-shrink: 0;
+        margin-bottom: 4px;
+      }
+      #screen-host-lobby .player-tiles {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 6px;
+        align-content: start;
+        margin: 4px 0 10px;
+        overflow: visible;
+      }
+      #screen-host-lobby .player-tile {
+        min-width: 0;
+        padding: 3px 8px 3px 3px;
+        gap: 6px;
+      }
+      #screen-host-lobby .player-tile .animal-avatar-wrap { --av-size: 34px; }
+      #screen-host-lobby .player-tile-name {
+        font-size: 11px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
+      #screen-host-lobby .lobby-waiting {
+        grid-column: 1 / -1;
+        padding: 16px;
+      }
+      #screen-host-lobby .manual-entry {
+        flex-shrink: 0;
+      }
+    }
+    @media (min-width: 1024px) and (max-height: 760px) {
+      #screen-host-lobby .player-tile .animal-avatar-wrap { --av-size: 28px; }
+      #screen-host-lobby .player-tiles { gap: 4px; }
+      #screen-host-lobby .room-code-boxes { margin: 6px 0; }
+      #screen-host-lobby .code-letter {
+        width: 42px;
+        height: 48px;
+        font-size: 22px;
+      }
+    }
+    .lobby-meta {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .join-qr-content { flex: 1; min-width: 0; }
+  </style>
+</head>
+<body>
+
+<header class="brandbar">
+  <span class="brandbar-logo">cisco</span>
+  <span class="brandbar-divider"></span>
+  <span class="brandbar-title">Monster Metrics Mayhem · Party Game</span>
+  <span class="brandbar-spacer"></span>
+  <a class="brandbar-link" href="https://wwwin-github.cisco.com/pages/hkinnas/metrics-dashboard/adoption.html">← Back to Dashboard</a>
+</header>
+
+<div class="app-layout">
+<div class="shell">
+
+  <!-- LANDING -->
+  <section id="screen-landing" class="screen active">
+    <div class="landing-wrap">
+      <div class="hero">
+        <div class="monster-parade" id="monster-parade" aria-hidden="true"></div>
+        <div class="hero-badge">🎉 Party Game</div>
+        <h1>Monster Metrics Mayhem</h1>
+        <p class="hero-sub">Guess the Benefits Number!</p>
+        <p>Use your phone to join. Host on the big screen. Closest guess wins — just like your favorite party game.</p>
+      </div>
+
+      <div class="chaos-scene" id="chaos-scene" aria-hidden="true"></div>
+
+      <div class="mode-cards">
+        <div class="mode-card" id="btn-host" role="button" tabindex="0">
+          <div class="mode-card-icon mode-card-monster" id="host-mode-monster"></div>
+          <h2>Host Game</h2>
+          <p>Project this screen. Everyone joins on their phones.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOST LOBBY -->
+  <section id="screen-host-lobby" class="screen">
+    <div class="card card-accent">
+      <div class="lobby-grid">
+        <div class="lobby-main">
+          <div class="lobby-header">
+            <h2 class="lobby-title">Waiting for Players</h2>
+            <p class="room-code-label">Go to this site on your phone &amp; enter code</p>
+            <div class="room-code-boxes" id="room-code-boxes"></div>
+            <div class="room-code" id="room-code" style="display:none" aria-hidden="true">----</div>
+
+            <div class="lobby-meta">
+              <span class="connection-status offline" id="host-connection-status">
+                <span class="dot-live"></span> Setting up room…
+              </span>
+            </div>
+          </div>
+          <p class="player-count" id="player-count">0 players in the room</p>
+          <ul id="player-list" class="player-tiles"></ul>
+
+          <details class="manual-entry">
+            <summary>Add players by name (no phone)</summary>
+            <div class="input-row">
+              <div><label>Player name</label><input type="text" id="lobby-player-name" placeholder="Alex"></div>
+              <div style="display:flex;align-items:flex-end;"><button class="btn btn-secondary btn-compact" id="btn-add-lobby-player" style="width:100%;">Add</button></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="lobby-join">
+          <div class="join-instructions">
+            <h3>📱 Join on your phone</h3>
+            <div class="join-qr-row">
+              <div class="qr-wrap">
+                <div id="join-qrcode" aria-label="Scan to join game"></div>
+                <p class="qr-caption">Scan to join</p>
+              </div>
+              <div class="join-qr-content">
+                <ul class="join-steps join-steps-compact">
+                  <li>Scan QR or copy link below</li>
+                  <li>Enter your name + code <strong id="room-code-inline-compact">----</strong></li>
+                  <li>Tap <strong>Lock In My Guess!</strong> each round</li>
+                </ul>
+                <ol class="join-steps join-steps-verbose">
+                  <li><strong>Scan the QR code</strong> with your phone camera, or open this link:</li>
+                </ol>
+                <div class="join-link-box">
+                  <input type="text" id="join-url" readonly aria-label="Player join link">
+                  <button class="btn btn-secondary btn-compact" id="btn-copy-join-link">Copy</button>
+                </div>
+                <ol class="join-steps join-steps-verbose" start="2" style="margin-top:10px;">
+                  <li>Open the link the host shared (room code is pre-filled)</li>
+                  <li>Enter your <strong>name</strong></li>
+                  <li>Enter room code <strong id="room-code-inline">----</strong></li>
+                  <li>Tap <strong>Join Room</strong> and wait for the host to start</li>
+                  <li>When a question appears, type your guess and tap <strong>Lock In My Guess!</strong></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lobby-actions">
+        <div class="btn-row" style="justify-content:center;margin-top:0;">
+          <button class="btn btn-primary btn-jumbo" id="btn-start-game">▶ Start the Game!</button>
+        </div>
+        <div class="btn-row" style="justify-content:center;margin-top:8px;">
+          <button class="btn btn-secondary btn-compact" id="btn-host-back">← Exit</button>
+        </div>
+      </div>
+      <p class="lobby-tip">Tip: phones can't connect? Add player names above, then enter guesses manually each round.</p>
+    </div>
+  </section>
+
+  <!-- HOST QUESTION -->
+  <section id="screen-host-question" class="screen">
+    <div class="phase-banner" id="phase-banner">Everyone — enter your guess!</div>
+    <div class="progress-dots" id="progress-dots"></div>
+    <div class="card question-body">
+      <div class="question-head">
+        <div class="question-meta" style="justify-content:center;margin-bottom:8px;">
+          <span class="pill" id="q-category">Category</span>
+          <span class="pill warning" id="q-number">Round 1 of 5</span>
+        </div>
+        <div class="question-head-row">
+          <div>
+            <div class="question-text" id="q-text"></div>
+            <div class="question-hint" id="q-hint"></div>
+          </div>
+          <div id="phase-guessing-timer" class="timer-wrap">
+            <div class="timer-circle" id="timer-circle">30</div>
+            <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+            <div class="timer-label">sec left</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="phase-guessing" class="question-play">
+        <p class="locked-label">Who's locked in?</p>
+        <div class="guesses-scroll">
+          <div class="guesses-grid" id="guesses-grid"></div>
+        </div>
+
+        <details class="manual-entry">
+          <summary>Enter guesses manually</summary>
+          <div class="input-row">
+            <div><label>Player name</label><input type="text" id="manual-name" placeholder="Alex"></div>
+            <div><label>Guess</label><input type="number" id="manual-guess" step="any" placeholder="3.5"></div>
+          </div>
+          <button class="btn btn-secondary btn-compact" id="btn-manual-add">Add Guess</button>
+        </details>
+
+        <div class="question-actions">
+          <div class="btn-row" style="justify-content:center;margin-top:0;">
+            <button class="btn btn-success btn-jumbo" id="btn-lock-guesses">🥁 Reveal the Answer!</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="phase-reveal" class="question-play" style="display:none;">
+        <div class="reveal-answer">
+          <div class="reveal-label" id="reveal-label">The real number is…</div>
+          <div class="reveal-value" id="reveal-value">—</div>
+        </div>
+        <div class="fun-fact" id="fun-fact"></div>
+        <div class="guesses-scroll">
+          <div class="guesses-grid" id="reveal-guesses-grid"></div>
+        </div>
+        <div class="question-actions">
+          <div class="btn-row" style="justify-content:center;margin-top:0;">
+            <button class="btn btn-primary btn-jumbo" id="btn-next-question">Next Round →</button>
+            <button class="btn btn-secondary btn-compact" id="btn-show-leaderboard">Scoreboard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOST LEADERBOARD -->
+  <section id="screen-host-leaderboard" class="screen">
+    <div class="card card-accent">
+      <h2 style="margin-bottom:12px;text-align:center;font-size:22px;font-weight:900;text-transform:uppercase;">🏆 Scoreboard</h2>
+      <div class="leaderboard-wrap">
+        <table class="leaderboard" id="leaderboard-table">
+          <thead><tr><th>#</th><th>Player</th><th style="text-align:right">Points</th></tr></thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+      <div class="btn-row" style="justify-content:center;margin-top:12px;">
+        <button class="btn btn-primary btn-compact" id="btn-continue-game">Continue Game</button>
+        <button class="btn btn-secondary btn-compact" id="btn-end-game">End Game</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOST FINAL -->
+  <section id="screen-host-final" class="screen">
+    <div class="card card-accent" style="text-align:center;">
+      <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+      <h2 style="margin-bottom:4px;font-size:24px;font-weight:900;">That's a Wrap!</h2>
+      <p style="color:var(--text-muted);margin-bottom:12px;font-size:14px;">Thanks for playing Monster Metrics Mayhem</p>
+      <div id="final-winner" style="font-size:18px;font-weight:700;color:var(--cisco-green);margin-bottom:12px;"></div>
+      <div class="leaderboard-wrap">
+        <table class="leaderboard" id="final-leaderboard">
+          <thead><tr><th>#</th><th>Player</th><th style="text-align:right">Final Score</th></tr></thead>
+          <tbody id="final-leaderboard-body"></tbody>
+        </table>
+      </div>
+      <div class="btn-row" style="justify-content:center;margin-top:12px;">
+        <button class="btn btn-primary btn-compact" id="btn-play-again">Play Again</button>
+        <button class="btn btn-secondary btn-compact" id="btn-final-back">← Home</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYER JOIN -->
+  <section id="screen-player-join" class="screen">
+    <div class="card card-accent">
+      <h2 style="margin-bottom:8px;font-size:24px;font-weight:900;">Join the Game!</h2>
+      <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">
+        Look at the host screen for the room code. Enter it below!
+      </p>
+      <div style="margin-bottom:16px;">
+        <label>Your name</label>
+        <input type="text" id="player-name" placeholder="Your name" maxlength="24">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label>Room code</label>
+        <input type="text" id="player-room" placeholder="ABCD" maxlength="4" style="text-transform:uppercase;letter-spacing:0.15em;font-size:24px;text-align:center;">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-jumbo" id="btn-player-connect" style="width:100%;">Let's Go!</button>
+        <button class="btn btn-secondary" id="btn-player-back">← Back</button>
+      </div>
+      <p id="player-join-error" style="color:var(--cisco-red);font-size:13px;margin-top:12px;display:none;"></p>
+      <p id="player-join-status" class="join-status">Connecting to room…</p>
+    </div>
+  </section>
+
+  <!-- PLAYER WAITING -->
+  <section id="screen-player-waiting" class="screen">
+    <div class="card">
+      <div class="status-msg">
+        <div id="waiting-animal" style="margin:0 auto 12px;display:flex;justify-content:center;"></div>
+        <p>Hey <strong id="waiting-name"></strong> — you're in!</p>
+        <p style="margin-top:8px;font-size:18px;font-weight:700;color:var(--jb-teal);">Look at the host screen…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYER GUESS -->
+  <section id="screen-player-guess" class="screen">
+    <div class="card">
+      <div class="player-you-bar" id="player-you-bar"></div>
+      <div class="question-meta">
+        <span class="pill" id="player-q-category">Category</span>
+      </div>
+      <div class="question-text" id="player-q-text" style="font-size:20px;"></div>
+      <div class="question-hint" id="player-q-hint"></div>
+      <div style="margin:24px 0;">
+        <label id="player-guess-label">Your guess</label>
+        <input type="number" id="player-guess-input" step="any" placeholder="Enter a number">
+      </div>
+      <button class="btn btn-primary btn-jumbo" id="btn-submit-guess" style="width:100%;">Lock In My Guess!</button>
+      <p id="player-guess-status" style="text-align:center;color:var(--cisco-green);margin-top:12px;display:none;font-weight:600;">✓ Guess locked in!</p>
+    </div>
+  </section>
+
+  <!-- PLAYER RESULT -->
+  <section id="screen-player-result" class="screen">
+    <div class="card">
+      <div class="reveal-answer">
+        <div class="reveal-label">The answer was</div>
+        <div class="reveal-value" id="player-reveal-value">—</div>
+      </div>
+      <p id="player-result-msg" style="text-align:center;margin:16px 0;font-size:16px;"></p>
+      <div class="fun-fact" id="player-fun-fact"></div>
+      <div class="status-msg" style="padding:20px;">
+        <p class="pulse">Waiting for next question…</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<aside id="host-sidebar" class="host-sidebar is-hidden" aria-label="Top 5 leaderboard">
+  <div class="sidebar-card">
+    <h3 class="sidebar-title">🏆 Top 5</h3>
+    <ol id="sidebar-leaderboard" class="sidebar-list">
+      <li class="sidebar-empty">Scores appear after round 1</li>
+    </ol>
+  </div>
+</aside>
+
+</div>
+
+<div class="confetti-container" id="confetti-container"></div>
+<div class="copy-toast" id="copy-toast">Link copied!</div>
+
+<script src="peerjs.min.js"></script>
+<script src="qrcode.min.js"></script>
+<script src="animal-avatars.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const QUESTIONS = [
+    {
+      category: 'Optum EAP',
+      prompt: 'What is global Optum EAP utilization using the Cisco HC denominator?',
+      hint: 'YTD 2025, annualized — all non-US regions combined',
+      answer: 3.94,
+      unit: 'percent',
+      format: v => v.toFixed(2) + '%',
+      funFact: 'Cisco runs ~58% above the Optum book-of-business benchmark of 2.5%.'
+    },
+    {
+      category: 'Optum EAP',
+      prompt: 'What is Optum EAP engagement rate (Cisco HC)?',
+      hint: 'Engagement = broader touchpoints beyond formal cases — much higher than utilization',
+      answer: 23.3,
+      unit: 'percent',
+      format: v => v.toFixed(1) + '%',
+      funFact: 'Engagement at 23.3% vs utilization at 3.94% shows many employees interact with EAP resources without opening a formal case.'
+    },
+    {
+      category: 'Wellthy',
+      prompt: 'What is Wellthy\'s engagement rate (trailing 12 months)?',
+      hint: 'Caregiving support platform — single-digit percentage',
+      answer: 6.9,
+      unit: 'percent',
+      format: v => v.toFixed(1) + '%',
+      funFact: 'Wellthy engagement climbed from 6.1% (annual 2025) to 6.9% trailing 12mo with 4,209 engaged lives.'
+    },
+    {
+      category: 'Wellthy',
+      prompt: 'How many active care projects did Wellthy have in the trailing 12 months (Apr 2025–Mar 2026)?',
+      hint: 'Think hundreds, not thousands — caregiving cases open during the period',
+      answer: 816,
+      unit: 'number',
+      format: v => v.toLocaleString(),
+      funFact: 'Active care projects grew from 611 (annual 2025) to 816 trailing 12mo — a 34% increase in open caregiving support.'
+    },
+    {
+      category: 'RethinkCare',
+      prompt: 'How many employees were cumulatively enrolled in RethinkCare by February 2026?',
+      hint: 'Global neurodiversity program — low four figures',
+      answer: 4145,
+      unit: 'number',
+      format: v => v.toLocaleString(),
+      funFact: '4,145 enrolled globally — US leads in volume (2,207) while Canada leads in penetration (7.80% of HC).'
+    }
+  ];
+
+  const GUESS_SECONDS = 30;
+  const POINTS = [100, 75, 50, 25];
+  const PARTICIPATION_PTS = 10;
+  const EXACT_BONUS = 25;
+  const EXACT_TOLERANCE = { percent: 0.3, number: 5, seconds: 0.05 };
+
+  const PLAYER_COLORS = [
+    '#02C8FF', '#0A60FF', '#FF9000', '#FF007F', '#02C8FF',
+    '#0A60FF', '#FF9000', '#FF007F', '#02C8FF', '#0A60FF'
+  ];
+
+  const JB_QUIPS = [
+    'Everyone — enter your guess!',
+    'Phones out! What do you think?',
+    'Trust your gut… or don\'t!',
+    'Place your bets, benefits nerds!',
+  ];
+
+  let peer = null;
+  let connections = [];
+  let roomCode = '';
+  let isHost = false;
+  let players = {};
+  let scores = {};
+  let currentQ = 0;
+  let guesses = {};
+  let timerInterval = null;
+  let timeLeft = GUESS_SECONDS;
+  let playerConn = null;
+  let hostConn = null;
+  let playerName = '';
+  let playerSubmitted = false;
+  let playerJoined = false;
+  let joinAttempt = 0;
+  let joinTimeout = null;
+  let gameStarted = false;
+  let hostConnFailed = false;
+  let lastJoinError = '';
+  const JOIN_MAX_ATTEMPTS = 8;
+  const JOIN_RETRY_MS = 20000;
+
+  const VALID_CODE_CHARS = /^[A-Z2-9]{4}$/;
+
+  const HOST_SIDEBAR_SCREENS = [
+    'screen-host-lobby',
+    'screen-host-question',
+    'screen-host-leaderboard',
+    'screen-host-final'
+  ];
+
+  const $ = id => document.getElementById(id);
+
+  // #region agent log
+  function debugLog(hypothesisId, location, message, data) {
+    const entry = { sessionId: 'a682eb', hypothesisId, location, message, data: data || {}, timestamp: Date.now() };
+    try {
+      const key = 'debug_a682eb';
+      const arr = JSON.parse(sessionStorage.getItem(key) || '[]');
+      arr.push(entry);
+      if (arr.length > 50) arr.shift();
+      sessionStorage.setItem(key, JSON.stringify(arr));
+    } catch (e) {}
+    fetch('http://127.0.0.1:7621/ingest/b99bcc1f-46e5-4115-b2a0-9902505a9fbf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'a682eb' },
+      body: JSON.stringify(entry)
+    }).catch(function () {});
+  }
+  // #endregion
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+    renderSidebarLeaderboard(id);
+  }
+
+  function renderSidebarLeaderboard(activeScreenId) {
+    const sidebar = $('host-sidebar');
+    const list = $('sidebar-leaderboard');
+    const active = activeScreenId || document.querySelector('.screen.active')?.id;
+
+    if (!isHost || !HOST_SIDEBAR_SCREENS.includes(active)) {
+      sidebar.classList.add('is-hidden');
+      return;
+    }
+
+    sidebar.classList.remove('is-hidden');
+    const names = new Set([...Object.keys(scores), ...Object.keys(players)]);
+    const sorted = [...names]
+      .map(name => [name, scores[name] || 0])
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 5);
+
+    if (sorted.length === 0) {
+      list.innerHTML = '<li class="sidebar-empty">Add players to begin</li>';
+      return;
+    }
+
+    list.innerHTML = sorted.map(([name, pts], i) => {
+      const rankCls = i === 0 ? ' gold' : i === 1 ? ' silver' : i === 2 ? ' bronze' : '';
+      return '<li class="sidebar-row' + (i === 0 ? ' leader' : '') + '">' +
+        '<span class="sidebar-rank' + rankCls + '">' + (i + 1) + '</span>' +
+        '<span class="sidebar-animal">' + renderAnimalAvatar(name, 'size-sm') + '</span>' +
+        '<span class="sidebar-name">' + escapeHtml(name) + '</span>' +
+        '<span class="sidebar-pts">' + pts + '</span></li>';
+    }).join('');
+  }
+
+  function genRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
+  function formatGuessInput(q) {
+    if (q.unit === 'percent') return 'Enter percentage (e.g. 3.94)';
+    if (q.unit === 'seconds') return 'Enter seconds (e.g. 0.83)';
+    return 'Enter a number';
+  }
+
+  function broadcast(data) {
+    const msg = JSON.stringify(data);
+    const sent = new Set();
+    connections.forEach(c => {
+      if (c.open) { c.send(msg); sent.add(c); }
+    });
+    Object.keys(players).forEach(name => {
+      const c = players[name] && players[name].conn;
+      if (c && c.open && !sent.has(c)) c.send(msg);
+    });
+  }
+
+  function renderAnimalAvatar(name, sizeClass) {
+    return AvatarKit.renderAnimalAvatar(players, name, sizeClass);
+  }
+
+  function ensurePlayerAvatar(name) {
+    return AvatarKit.ensurePlayerAvatar(players, name);
+  }
+
+  function renderPlayerYouBar() {
+    const bar = $('player-you-bar');
+    if (!bar || !playerName) return;
+    const av = ensurePlayerAvatar(playerName);
+    bar.innerHTML = renderAnimalAvatar(playerName, 'size-md') +
+      '<div><div class="player-you-label">Playing as</div><div class="player-you-name">' + escapeHtml(playerName) + '</div></div>';
+  }
+
+  function ensurePlayerColor(name) {
+    if (!players[name]) players[name] = {};
+    if (!players[name].color) {
+      const idx = Object.keys(players).indexOf(name);
+      players[name].color = PLAYER_COLORS[Math.max(0, idx) % PLAYER_COLORS.length];
+    }
+    return players[name].color;
+  }
+
+  function playerInitials(name) {
+    return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  }
+
+  function renderRoomCodeBoxes() {
+    const box = $('room-code-boxes');
+    if (!box) return;
+    box.innerHTML = roomCode.split('').map((ch, i) =>
+      '<span class="code-letter" style="--i:' + i + '">' + ch + '</span>'
+    ).join('');
+  }
+
+  function lobbyPlayerNames() {
+    return Object.keys(players).filter(n => players[n].joined || players[n].manual);
+  }
+
+  function updatePlayerList() {
+    const list = $('player-list');
+    const names = lobbyPlayerNames();
+    $('player-count').textContent = names.length + ' player' + (names.length !== 1 ? 's' : '') + ' in the room';
+    if (names.length === 0) {
+      list.innerHTML = '<li class="lobby-waiting">Waiting for players to join…</li>';
+      return;
+    }
+    list.innerHTML = names.map(n => {
+      const offline = players[n].joined && !(players[n].conn && players[n].conn.open);
+      return '<li class="player-tile">' +
+        renderAnimalAvatar(n, 'size-sm') +
+        '<span class="player-tile-name">' + escapeHtml(n) +
+        (offline ? ' <span style="opacity:0.6;font-size:11px">(reconnecting…)</span>' : '') +
+        '</span></li>';
+    }).join('');
+  }
+
+  function addLobbyPlayer(name) {
+    name = name.trim().slice(0, 24);
+    if (!name || players[name]) return false;
+    if (AvatarKit.isAvatarPoolExhausted(players, null)) return false;
+    players[name] = { manual: true };
+    if (!ensurePlayerAvatar(name)) {
+      delete players[name];
+      return false;
+    }
+    ensurePlayerColor(name);
+    scores[name] = scores[name] || 0;
+    updatePlayerList();
+    renderSidebarLeaderboard();
+    return true;
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderLandingDecor() {
+    if (typeof AvatarKit === 'undefined') return;
+
+    const parade = $('monster-parade');
+    if (parade) {
+      const paradeIds = ['m01', 'm02', 'm04', 'm06', 'm08', 'm10', 'm12', 'm15', 'm19', 'm23'];
+      parade.innerHTML = paradeIds.map((id, i) =>
+        '<div class="parade-monster" style="--delay:' + (i * 0.14) + 's;--tilt:' + ((i % 2 ? 1 : -1) * (4 + (i % 3))) + 'deg">' +
+          AvatarKit.renderPreview(id, null, null, null, 'size-xl') +
+        '</div>'
+      ).join('');
+    }
+
+    const hostMon = $('host-mode-monster');
+    if (hostMon) hostMon.innerHTML = AvatarKit.renderPreview('m03', null, null, null, 'size-lg');
+
+    const scene = $('chaos-scene');
+    if (!scene) return;
+
+    const numbers = [
+      { text: '3.94%', x: 2, y: 6, rot: -22, color: '#FF9000', size: 26, delay: 0 },
+      { text: '???', x: 78, y: 4, rot: 14, color: '#FF007F', size: 38, delay: 0.4 },
+      { text: '1,800', x: 58, y: 58, rot: -8, color: '#02C8FF', size: 22, delay: 0.9 },
+      { text: '23.3%', x: 12, y: 62, rot: 18, color: '#0A60FF', size: 24, delay: 0.2 },
+      { text: '4,209', x: 38, y: 18, rot: -12, color: '#02C8FF', size: 28, delay: 0.6 },
+      { text: '6.9%', x: 84, y: 48, rot: 20, color: '#FF9000', size: 30, delay: 1.1 },
+      { text: '2.5%', x: 24, y: 32, rot: 6, color: '#6da8c4', size: 20, delay: 0.5 },
+      { text: '816', x: 66, y: 28, rot: -16, color: '#FF9000', size: 32, delay: 0.7 },
+      { text: '4.84%', x: 46, y: 72, rot: 10, color: '#0A60FF', size: 26, delay: 1.3 },
+      { text: '100', x: 6, y: 38, rot: -25, color: '#FF007F', size: 34, delay: 0.3 },
+      { text: '???', x: 52, y: 44, rot: -6, color: '#fff', size: 42, delay: 0.8 },
+      { text: '58%', x: 88, y: 18, rot: 15, color: '#02C8FF', size: 18, delay: 1.0 }
+    ];
+
+    const monsters = [
+      { id: 'm05', x: 18, y: 48, size: 'size-xl', rot: -10, delay: 0 },
+      { id: 'm09', x: 42, y: 38, size: 'size-lg', rot: 8, delay: 0.5 },
+      { id: 'm14', x: 68, y: 52, size: 'size-xl', rot: -6, delay: 0.3 },
+      { id: 'm20', x: 8, y: 14, size: 'size-md', rot: 12, delay: 0.8 },
+      { id: 'm11', x: 88, y: 62, size: 'size-lg', rot: -14, delay: 0.6 },
+      { id: 'm22', x: 30, y: 8, size: 'size-md', rot: 6, delay: 1.1 },
+      { id: 'm07', x: 74, y: 8, size: 'size-md', rot: -8, delay: 0.2 },
+      { id: 'm16', x: 54, y: 62, size: 'size-lg', rot: 10, delay: 0.9 }
+    ];
+
+    scene.innerHTML =
+      numbers.map(n =>
+        '<span class="chaos-num" style="' +
+          'left:' + n.x + '%;top:' + n.y + '%;' +
+          'font-size:' + n.size + 'px;color:' + n.color + ';' +
+          '--rot:' + n.rot + 'deg;--delay:' + n.delay + 's' +
+        '">' + escapeHtml(n.text) + '</span>'
+      ).join('') +
+      monsters.map(m =>
+        '<div class="chaos-monster" style="' +
+          'left:' + m.x + '%;top:' + m.y + '%;' +
+          '--rot:' + m.rot + 'deg;--delay:' + m.delay + 's' +
+        '">' + AvatarKit.renderPreview(m.id, null, null, null, m.size) + '</div>'
+      ).join('');
+  }
+
+  function setConnectionStatus(online, text) {
+    const el = $('host-connection-status');
+    el.className = 'connection-status ' + (online ? 'online' : 'offline');
+    el.innerHTML = '<span class="dot-live"></span> ' + text;
+  }
+
+  function getJoinUrl(code) {
+    const base = location.href.split('?')[0].split('#')[0];
+    return base + '?room=' + encodeURIComponent(code);
+  }
+
+  function updateJoinInstructions() {
+    $('room-code').textContent = roomCode;
+    $('room-code-inline').textContent = roomCode;
+    const compact = $('room-code-inline-compact');
+    if (compact) compact.textContent = roomCode;
+    renderRoomCodeBoxes();
+    const url = getJoinUrl(roomCode);
+    $('join-url').value = url;
+    renderJoinQR(url);
+  }
+
+  function renderJoinQR(url) {
+    const container = $('join-qrcode');
+    container.innerHTML = '';
+    if (typeof QRCode === 'undefined') {
+      container.innerHTML = '<p style="font-size:12px;color:#58585b;padding:40px 20px;">QR unavailable</p>';
+      return;
+    }
+    new QRCode(container, {
+      text: url,
+      width: 120,
+      height: 120,
+      colorDark: '#07182D',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  function showCopyToast() {
+    const toast = $('copy-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  /* ── Host setup ─────────────────────────────────── */
+  function startHost() {
+    isHost = true;
+    gameStarted = false;
+    document.body.classList.remove('player-mode');
+    document.body.classList.add('party-mode');
+    roomCode = genRoomCode();
+    players = {};
+    scores = {};
+    currentQ = 0;
+    updateJoinInstructions();
+    showScreen('screen-host-lobby');
+
+    if (typeof Peer === 'undefined') {
+      setConnectionStatus(false, 'Live sync unavailable — add players by name below');
+      return;
+    }
+
+    const peerId = 'benefits-' + roomCode;
+    try {
+      if (peer) { peer.destroy(); peer = null; }
+      peer = new Peer(peerId, { debug: 1 });
+      peer.on('open', () => {
+
+        setConnectionStatus(true, 'Room live — players can join');
+      });
+      peer.on('connection', conn => {
+
+        connections.push(conn);
+        conn.on('data', raw => {
+          try {
+            handleHostMessage(JSON.parse(raw), conn);
+          } catch (e) { console.warn('Bad message from player', e); }
+        });
+        conn.on('close', () => {
+          connections = connections.filter(c => c !== conn);
+          const name = conn._playerName;
+          if (!name || !players[name] || players[name].conn !== conn) return;
+          players[name].conn = null;
+          // Keep lobby players visible after join — only drop failed handshakes
+          if (!gameStarted && !players[name].manual && !players[name].joined) {
+            delete players[name];
+            delete scores[name];
+          }
+          updatePlayerList();
+          renderSidebarLeaderboard();
+        });
+      });
+      peer.on('error', err => {
+
+        console.warn('Peer error:', err);
+        if (err.type === 'unavailable-id') {
+          setConnectionStatus(false, 'Room ID conflict — exit and host again');
+        } else {
+          setConnectionStatus(false, 'Live sync unavailable — add players by name below');
+        }
+      });
+    } catch (e) {
+      setConnectionStatus(false, 'Live sync unavailable — add players by name below');
+    }
+  }
+
+  function handleHostMessage(data, conn) {
+    if (data.type === 'join') {
+      const code = (data.roomCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+      if (code && code !== roomCode) {
+
+        conn.send(JSON.stringify({ type: 'join-error', message: 'Wrong room code. Check the 4-character code on the host screen.' }));
+        return;
+      }
+      const name = (data.name || '').trim().slice(0, 24);
+      if (!name) {
+        conn.send(JSON.stringify({ type: 'join-error', message: 'Please enter a name.' }));
+        return;
+      }
+      if (players[name] && players[name].joined && players[name].conn && players[name].conn !== conn && players[name].conn.open) {
+        conn.send(JSON.stringify({ type: 'join-error', message: 'That name is taken. Pick another!' }));
+        return;
+      }
+      if (players[name] && players[name].conn && players[name].conn !== conn) {
+        try { players[name].conn.close(); } catch (e) {}
+      }
+      if (!players[name] && AvatarKit.isAvatarPoolExhausted(players, null)) {
+        conn.send(JSON.stringify({ type: 'join-error', message: 'Room is full — all 25 monster icons are taken.' }));
+        return;
+      }
+      const avatar = ensurePlayerAvatar(name);
+      if (!avatar) {
+        conn.send(JSON.stringify({ type: 'join-error', message: 'Room is full — all 25 monster icons are taken.' }));
+        return;
+      }
+      players[name] = Object.assign({}, players[name], { conn, joined: true });
+      ensurePlayerColor(name);
+      if (!scores[name]) scores[name] = 0;
+      conn._playerName = name;
+      updatePlayerList();
+      renderSidebarLeaderboard();
+
+      conn.send(JSON.stringify({ type: 'joined', name, avatar, roomCode }));
+    }
+    if (data.type === 'guess') {
+      const name = data.name;
+      if (!players[name] || guesses[name] !== undefined) return;
+      guesses[name] = parseFloat(data.value);
+      renderGuesses();
+      broadcast({ type: 'guess-received', name, count: Object.keys(guesses).length });
+    }
+  }
+
+  function startGame() {
+    gameStarted = true;
+    currentQ = 0;
+    showQuestion();
+  }
+
+  function renderProgressDots() {
+    const dots = $('progress-dots');
+    dots.innerHTML = QUESTIONS.map((_, i) => {
+      let cls = 'dot';
+      if (i < currentQ) cls += ' done';
+      if (i === currentQ) cls += ' current';
+      return '<span class="' + cls + '"></span>';
+    }).join('');
+  }
+
+  function showQuestion() {
+    guesses = {};
+    playerSubmitted = false;
+    const q = QUESTIONS[currentQ];
+    showScreen('screen-host-question');
+    renderProgressDots();
+
+    $('phase-guessing').style.display = 'flex';
+    $('phase-reveal').style.display = 'none';
+    const timerEl = $('phase-guessing-timer');
+    if (timerEl) timerEl.style.display = '';
+    $('q-category').textContent = q.category;
+    $('q-number').textContent = 'Round ' + (currentQ + 1) + ' of ' + QUESTIONS.length;
+    $('q-text').textContent = q.prompt;
+    $('q-hint').textContent = '💡 ' + q.hint;
+    const banner = $('phase-banner');
+    banner.textContent = JB_QUIPS[currentQ % JB_QUIPS.length];
+    banner.className = 'phase-banner';
+    renderGuesses();
+
+    broadcast({
+      type: 'question',
+      index: currentQ,
+      category: q.category,
+      prompt: q.prompt,
+      hint: q.hint,
+      unit: q.unit,
+      guessLabel: formatGuessInput(q)
+    });
+
+    startTimer();
+  }
+
+  function startTimer() {
+    timeLeft = GUESS_SECONDS;
+    const circle = $('timer-circle');
+    circle.textContent = timeLeft;
+    circle.classList.remove('urgent');
+    $('timer-fill').style.width = '100%';
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      const t = Math.max(0, timeLeft);
+      circle.textContent = t;
+      $('timer-fill').style.width = (t / GUESS_SECONDS * 100) + '%';
+      if (t <= 5) circle.classList.add('urgent');
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        lockAndReveal();
+      }
+    }, 1000);
+  }
+
+  function renderGuesses() {
+    const grid = $('guesses-grid');
+    const names = Object.keys(players);
+    grid.innerHTML = names.map(name => {
+      const g = guesses[name];
+      const locked = g !== undefined;
+      const c = ensurePlayerColor(name);
+      return '<div class="guess-chip' + (locked ? ' locked' : '') + '" style="--pc:' + c + '">' +
+        renderAnimalAvatar(name, 'size-sm') +
+        '<div class="name">' + escapeHtml(name) + '</div>' +
+        '<div class="value' + (locked ? '' : ' pending') + '">' + (locked ? g : '?') + '</div></div>';
+    }).join('');
+  }
+
+  function scoreRound() {
+    const q = QUESTIONS[currentQ];
+    const tol = EXACT_TOLERANCE[q.unit] || 0.5;
+    const entries = Object.entries(guesses).map(([name, value]) => ({
+      name, value, diff: Math.abs(value - q.answer)
+    }));
+    entries.sort((a, b) => a.diff - b.diff);
+
+    const roundScores = {};
+    entries.forEach((e, i) => {
+      let pts = PARTICIPATION_PTS;
+      if (i < POINTS.length) pts = POINTS[i];
+      if (e.diff <= tol) pts += EXACT_BONUS;
+      roundScores[e.name] = pts;
+      scores[e.name] = (scores[e.name] || 0) + pts;
+      e.points = pts;
+      e.winner = i === 0;
+    });
+
+    // Players who didn't guess get nothing this round
+    return entries;
+  }
+
+  function lockAndReveal() {
+    clearInterval(timerInterval);
+    const q = QUESTIONS[currentQ];
+    const results = scoreRound();
+
+    $('phase-guessing').style.display = 'none';
+    $('phase-reveal').style.display = 'flex';
+    const timerEl = $('phase-guessing-timer');
+    if (timerEl) timerEl.style.display = 'none';
+    const banner = $('phase-banner');
+    banner.textContent = 'AND THE ANSWER IS…';
+    banner.className = 'phase-banner reveal';
+    document.body.classList.add('reveal-flash');
+    setTimeout(() => document.body.classList.remove('reveal-flash'), 700);
+    $('reveal-value').textContent = q.format(q.answer);
+    $('fun-fact').textContent = q.funFact;
+
+    const grid = $('reveal-guesses-grid');
+    grid.innerHTML = results.map(r => {
+      const c = ensurePlayerColor(r.name);
+      const cls = r.winner ? ' winner' : '';
+      return '<div class="guess-chip' + cls + '" style="--pc:' + c + '">' +
+        renderAnimalAvatar(r.name, 'size-sm') +
+        '<div class="name">' + escapeHtml(r.name) + '</div>' +
+        '<div class="value">' + r.value + '</div>' +
+        '<div class="pts-pop">+' + r.points + ' pts' + (r.winner ? ' 🏆' : '') + '</div></div>';
+    }).join('');
+
+    if (results.length && results[0].diff <= (EXACT_TOLERANCE[q.unit] || 0.5)) {
+      launchConfetti();
+    }
+
+    broadcast({
+      type: 'reveal',
+      answer: q.answer,
+      formatted: q.format(q.answer),
+      funFact: q.funFact,
+      results: results.map(r => ({ name: r.name, value: r.value, points: r.points, winner: r.winner })),
+      scores
+    });
+    renderSidebarLeaderboard();
+  }
+
+  function showLeaderboard(continuable) {
+    const tbody = continuable ? $('leaderboard-body') : $('final-leaderboard-body');
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    tbody.innerHTML = sorted.map(([name, pts], i) => {
+      const rankCls = i === 0 ? ' gold' : i === 1 ? ' silver' : i === 2 ? ' bronze' : '';
+      const rowCls = i === 0 ? ' class="leader"' : '';
+      return '<tr' + rowCls + '><td class="rank' + rankCls + '">' + (i + 1) + '</td>' +
+        '<td>' + escapeHtml(name) + '</td>' +
+        '<td class="points">' + pts + '</td></tr>';
+    }).join('');
+
+    if (continuable) {
+      showScreen('screen-host-leaderboard');
+      broadcast({ type: 'leaderboard', scores });
+    } else {
+      $('final-winner').textContent = sorted.length
+        ? '🏆 ' + sorted[0][0] + ' wins with ' + sorted[0][1] + ' points!'
+        : '';
+      showScreen('screen-host-final');
+      launchConfetti();
+      broadcast({ type: 'game-over', scores, winner: sorted[0]?.[0] });
+    }
+  }
+
+  function nextQuestion() {
+    currentQ++;
+    if (currentQ >= QUESTIONS.length) {
+      showLeaderboard(false);
+    } else {
+      showQuestion();
+    }
+  }
+
+  function launchConfetti() {
+    const container = $('confetti-container');
+    container.innerHTML = '';
+    const colors = ['#02C8FF', '#0A60FF', '#FF9000', '#FF007F', '#ffffff'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = Math.random() * 100 + '%';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.animationDelay = Math.random() * 0.8 + 's';
+      el.style.animationDuration = (2 + Math.random() * 2) + 's';
+      container.appendChild(el);
+    }
+    setTimeout(() => { container.innerHTML = ''; }, 4000);
+  }
+
+  function clearJoinWatchdog() {
+    clearTimeout(joinTimeout);
+    joinTimeout = null;
+  }
+
+  function cleanupJoinAttempt() {
+    clearJoinWatchdog();
+    closeHostConn();
+  }
+
+  function cleanupPlayerConnection() {
+    cleanupJoinAttempt();
+    if (playerConn) { try { playerConn.destroy(); } catch (e) {} playerConn = null; }
+    playerJoined = false;
+    joinAttempt = 0;
+  }
+
+  function cleanup() {
+    clearInterval(timerInterval);
+    cleanupPlayerConnection();
+    connections.forEach(c => c.close());
+    connections = [];
+    if (peer) { peer.destroy(); peer = null; }
+    isHost = false;
+    document.body.classList.remove('party-mode', 'player-mode');
+    renderSidebarLeaderboard();
+  }
+
+  /* ── Player setup ───────────────────────────────── */
+  function setJoinUI(state, message) {
+    const err = $('player-join-error');
+    const status = $('player-join-status');
+    const btn = $('btn-player-connect');
+    if (state === 'connecting') {
+      err.style.display = 'none';
+      status.textContent = message || 'Connecting to room…';
+      status.classList.add('show');
+      btn.disabled = true;
+    } else if (state === 'error') {
+      status.classList.remove('show');
+      err.textContent = message;
+      err.style.display = 'block';
+      btn.disabled = false;
+    } else {
+      status.classList.remove('show');
+      err.style.display = 'none';
+      btn.disabled = false;
+    }
+  }
+
+  function ensurePlayerPeerReady() {
+    return new Promise((resolve, reject) => {
+      if (playerConn && !playerConn.destroyed && playerConn.open) {
+        resolve();
+        return;
+      }
+      if (playerConn) {
+        try { playerConn.destroy(); } catch (e) {}
+        playerConn = null;
+      }
+      try {
+        playerConn = new Peer(undefined, { debug: 1 });
+        playerConn.once('open', () => {
+
+          resolve();
+        });
+        playerConn.once('error', err => {
+
+          reject(err);
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  function closeHostConn() {
+    if (hostConn) {
+      try { hostConn.close(); } catch (e) {}
+      hostConn = null;
+    }
+  }
+
+  function buildJoinFailMessage() {
+    if (lastJoinError === 'peer-unavailable') {
+      return 'Room "' + roomCode + '" not found. Confirm the host screen shows "Room live" and the code matches exactly.';
+    }
+    if (lastJoinError === 'network' || lastJoinError === 'socket-error' || lastJoinError === 'disconnected') {
+      return 'Live sync is blocked on this network. Ask the host to add "' + playerName + '" manually in the lobby.';
+    }
+    return 'Could not reach the host room. Check the code matches the screen, or ask the host to add you manually.';
+  }
+
+  function failJoinAttempt(message) {
+    cleanupPlayerConnection();
+    // #region agent log
+    debugLog('H3', 'index.html:failJoinAttempt', 'join failed', { joinAttempt, lastJoinError, roomCode, message: message || buildJoinFailMessage() });
+    // #endregion
+    setJoinUI('error', message || buildJoinFailMessage());
+  }
+
+  function attachHostConnectionHandlers() {
+    if (!hostConn) return;
+    hostConnFailed = false;
+    hostConn.on('open', () => {
+      hostConnFailed = false;
+      lastJoinError = '';
+      // #region agent log
+      debugLog('H3', 'index.html:hostConn', 'open', { roomCode, playerName });
+      // #endregion
+      hostConn.send(JSON.stringify({ type: 'join', name: playerName, roomCode }));
+    });
+    hostConn.on('data', raw => {
+      try { handlePlayerMessage(JSON.parse(raw)); } catch (e) {}
+    });
+    hostConn.on('error', err => {
+      hostConnFailed = true;
+      lastJoinError = (err && err.type) || 'error';
+      // #region agent log
+      debugLog('H3', 'index.html:hostConn', 'error', { type: lastJoinError, attempt: joinAttempt });
+      // #endregion
+    });
+    hostConn.on('close', () => {
+      // #region agent log
+      debugLog('H3', 'index.html:hostConn', 'close', { playerJoined, attempt: joinAttempt, lastJoinError });
+      // #endregion
+      const waitingScreen = document.querySelector('.screen.active')?.id === 'screen-player-waiting';
+      if (playerJoined && waitingScreen) {
+        hostConn = null;
+        hostConnFailed = false;
+        ensurePlayerPeerReady()
+          .then(() => { if (playerJoined) tryConnectToHost(true); })
+          .catch(() => {});
+        return;
+      }
+      if (playerJoined && !playerSubmitted) {
+        setJoinUI('error', 'Disconnected from host. Tap Let\'s Go! to reconnect.');
+        playerJoined = false;
+        return;
+      }
+      if (!playerJoined) {
+        hostConnFailed = true;
+        hostConn = null;
+      }
+    });
+  }
+
+  function scheduleJoinWatchdog() {
+    clearTimeout(joinTimeout);
+    joinTimeout = setTimeout(() => {
+      joinTimeout = null;
+      if (playerJoined) return;
+
+      if (hostConn && !hostConn.open && !hostConnFailed) {
+        setJoinUI('connecting', 'Still connecting… (corporate Wi‑Fi can take 20–30 seconds)');
+        scheduleJoinWatchdog();
+        return;
+      }
+
+      joinAttempt++;
+      // #region agent log
+      debugLog('H3', 'index.html:watchdog', 'retry tick', { joinAttempt, lastJoinError, hasHostConn: !!hostConn, hostConnOpen: !!(hostConn && hostConn.open) });
+      // #endregion
+
+      if (joinAttempt >= JOIN_MAX_ATTEMPTS) {
+        failJoinAttempt();
+        return;
+      }
+
+      closeHostConn();
+      hostConnFailed = false;
+      setJoinUI('connecting', 'Still connecting… (attempt ' + (joinAttempt + 1) + ' of ' + JOIN_MAX_ATTEMPTS + ')');
+      tryConnectToHost(true);
+      scheduleJoinWatchdog();
+    }, JOIN_RETRY_MS);
+  }
+
+  function tryConnectToHost(forceNew) {
+    if (playerJoined || !playerConn || !playerConn.open) return;
+    if (!forceNew && hostConn && !hostConnFailed) return;
+    closeHostConn();
+    hostConnFailed = false;
+    const peerId = 'benefits-' + roomCode;
+    hostConn = playerConn.connect(peerId, { reliable: true });
+    // #region agent log
+    debugLog('H2', 'index.html:tryConnectToHost', 'connect', { peerId, attempt: joinAttempt, playerPeerId: playerConn.id });
+    // #endregion
+    attachHostConnectionHandlers();
+  }
+
+  function connectPlayerToHost() {
+    cleanupJoinAttempt();
+    hostConnFailed = false;
+    lastJoinError = '';
+    setJoinUI('connecting', joinAttempt > 0 ? 'Retrying… (attempt ' + (joinAttempt + 1) + ')' : 'Connecting to room…');
+
+    ensurePlayerPeerReady()
+      .then(() => {
+        if (playerJoined) return;
+        // #region agent log
+        debugLog('H1', 'index.html:connectPlayerToHost', 'player peer ready', { playerPeerId: playerConn.id, roomCode });
+        // #endregion
+        tryConnectToHost(true);
+        scheduleJoinWatchdog();
+      })
+      .catch(err => {
+        lastJoinError = (err && err.type) || 'network';
+        console.warn('Player peer error:', err);
+        if (!playerJoined) {
+          cleanupPlayerConnection();
+          setJoinUI('error', 'Network blocked live sync. Ask the host to add "' + playerName + '" manually and enter your guess for you.');
+        }
+      });
+  }
+
+  function joinAsPlayer() {
+    document.body.classList.add('player-mode');
+    playerName = $('player-name').value.trim().slice(0, 24);
+    roomCode = $('player-room').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (!playerName) { setJoinUI('error', 'Please enter your name.'); return; }
+    if (roomCode.length !== 4 || !VALID_CODE_CHARS.test(roomCode)) {
+      setJoinUI('error', 'Room code must be 4 characters (letters A–Z and numbers 2–9).');
+      return;
+    }
+
+    if (typeof Peer === 'undefined') {
+      setJoinUI('error', 'Live phone sync is unavailable on this network. Ask the host to add your guess manually.');
+      return;
+    }
+
+    joinAttempt = 0;
+    playerJoined = false;
+    // #region agent log
+    debugLog('H5', 'index.html:joinAsPlayer', 'start', { playerName, roomCode });
+    // #endregion
+    connectPlayerToHost();
+  }
+
+  function handlePlayerMessage(data) {
+    // #region agent log
+    debugLog('H4', 'index.html:handlePlayerMessage', 'message', { type: data.type });
+    // #endregion
+    if (data.type === 'join-error') {
+      cleanupPlayerConnection();
+      setJoinUI('error', data.message || 'Could not join.');
+      return;
+    }
+    if (data.type === 'joined') {
+      clearJoinWatchdog();
+      playerJoined = true;
+      joinAttempt = 0;
+      setJoinUI('idle');
+      if (!players[playerName]) players[playerName] = {};
+      if (data.avatar) AvatarKit.applyAvatarFromHost(players, playerName, data.avatar);
+      ensurePlayerAvatar(playerName);
+      $('waiting-name').textContent = playerName;
+      const waitIcon = $('waiting-animal');
+      if (waitIcon) waitIcon.innerHTML = renderAnimalAvatar(playerName, 'size-lg');
+      document.body.classList.add('party-mode');
+      showScreen('screen-player-waiting');
+    }
+    if (data.type === 'question') {
+      playerSubmitted = false;
+      renderPlayerYouBar();
+      $('player-guess-status').style.display = 'none';
+      $('player-guess-input').value = '';
+      $('player-guess-input').disabled = false;
+      $('btn-submit-guess').disabled = false;
+      $('player-q-category').textContent = data.category;
+      $('player-q-text').textContent = data.prompt;
+      $('player-q-hint').textContent = '💡 ' + data.hint;
+      $('player-guess-label').textContent = data.guessLabel || 'Your guess';
+      showScreen('screen-player-guess');
+    }
+    if (data.type === 'reveal') {
+      $('player-reveal-value').textContent = data.formatted;
+      $('player-fun-fact').textContent = data.funFact;
+      const mine = data.results.find(r => r.name === playerName);
+      if (mine) {
+        const msg = mine.winner
+          ? '🏆 Closest! +' + mine.points + ' points'
+          : '+' + mine.points + ' points';
+        $('player-result-msg').textContent = msg;
+        if (mine.winner) launchConfetti();
+      }
+      showScreen('screen-player-result');
+    }
+    if (data.type === 'leaderboard' || data.type === 'game-over') {
+      if (data.type === 'game-over') {
+        const myScore = data.scores[playerName] || 0;
+        $('player-result-msg').textContent = 'Final score: ' + myScore + ' points';
+        if (data.winner === playerName) launchConfetti();
+      }
+    }
+  }
+
+  function submitPlayerGuess() {
+    if (playerSubmitted) return;
+    const val = parseFloat($('player-guess-input').value);
+    if (isNaN(val)) return;
+    playerSubmitted = true;
+    $('player-guess-input').disabled = true;
+    $('btn-submit-guess').disabled = true;
+    $('player-guess-status').style.display = 'block';
+
+    if (hostConn && hostConn.open) {
+      hostConn.send(JSON.stringify({ type: 'guess', name: playerName, value: val }));
+    }
+  }
+
+  /* ── Event bindings ─────────────────────────────── */
+  $('btn-host').addEventListener('click', startHost);
+  $('btn-host').addEventListener('keydown', e => { if (e.key === 'Enter') startHost(); });
+
+  $('btn-host-back').addEventListener('click', () => { cleanup(); showScreen('screen-landing'); });
+  $('btn-start-game').addEventListener('click', startGame);
+  $('btn-copy-join-link').addEventListener('click', () => {
+    const url = $('join-url').value;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showCopyToast);
+    } else {
+      $('join-url').select();
+      document.execCommand('copy');
+      showCopyToast();
+    }
+  });
+  $('btn-add-lobby-player').addEventListener('click', () => {
+    if (addLobbyPlayer($('lobby-player-name').value)) $('lobby-player-name').value = '';
+    else if ($('lobby-player-name').value.trim()) alert('Cannot add player — name taken or all 25 monster icons are in use.');
+  });
+  $('lobby-player-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (addLobbyPlayer($('lobby-player-name').value)) $('lobby-player-name').value = '';
+    }
+  });
+
+  $('btn-lock-guesses').addEventListener('click', lockAndReveal);
+  $('btn-next-question').addEventListener('click', nextQuestion);
+  $('btn-show-leaderboard').addEventListener('click', () => showLeaderboard(true));
+  $('btn-continue-game').addEventListener('click', () => {
+    if (currentQ >= QUESTIONS.length) showLeaderboard(false);
+    else showQuestion();
+  });
+  $('btn-end-game').addEventListener('click', () => showLeaderboard(false));
+  $('btn-play-again').addEventListener('click', () => { cleanup(); startHost(); });
+  $('btn-final-back').addEventListener('click', () => { cleanup(); showScreen('screen-landing'); });
+
+  $('btn-player-connect').addEventListener('click', joinAsPlayer);
+  $('player-name').addEventListener('keydown', e => { if (e.key === 'Enter') joinAsPlayer(); });
+  $('player-room').addEventListener('keydown', e => { if (e.key === 'Enter') joinAsPlayer(); });
+  $('btn-player-back').addEventListener('click', () => { document.body.classList.remove('player-mode'); showScreen('screen-landing'); });
+  $('btn-submit-guess').addEventListener('click', submitPlayerGuess);
+
+  $('btn-manual-add').addEventListener('click', () => {
+    const name = $('manual-name').value.trim();
+    const val = parseFloat($('manual-guess').value);
+    if (!name || isNaN(val) || guesses[name] !== undefined) return;
+    if (!players[name]) {
+      if (AvatarKit.isAvatarPoolExhausted(players, null)) return;
+      players[name] = { manual: true };
+      if (!ensurePlayerAvatar(name)) {
+        delete players[name];
+        return;
+      }
+      scores[name] = scores[name] || 0;
+      updatePlayerList();
+    }
+    guesses[name] = val;
+    renderGuesses();
+    $('manual-name').value = '';
+    $('manual-guess').value = '';
+  });
+
+  // Auto-fill room code from URL ?room=ABCD and open join screen
+  const urlRoom = new URLSearchParams(location.search).get('room');
+  if (urlRoom) {
+    const code = urlRoom.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    if (code.length === 4) {
+      $('player-room').value = code;
+      document.body.classList.add('player-mode');
+      showScreen('screen-player-join');
+    }
+  }
+
+  $('player-room').addEventListener('input', e => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+  });
+
+  renderLandingDecor();
+
+  if (new URLSearchParams(location.search).get('debug') === '1') {
+    const pre = document.createElement('pre');
+    pre.id = 'debug-panel';
+    pre.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:100px;overflow:auto;background:rgba(0,0,0,0.85);color:#0f0;font-size:10px;z-index:9999;padding:6px;margin:0;';
+    document.body.appendChild(pre);
+    setInterval(function () {
+      try {
+        const arr = JSON.parse(sessionStorage.getItem('debug_a682eb') || '[]');
+        pre.textContent = arr.slice(-6).map(function (e) { return e.message + ' ' + JSON.stringify(e.data); }).join('\n');
+      } catch (err) {}
+    }, 800);
+  }
+})();
+</script>
+</body>
+</html>
