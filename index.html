@@ -252,10 +252,16 @@
 
     /* Landing — Jackbox title screen */
     .hero { text-align: center; padding: 16px 0 24px; }
+    #screen-landing.active {
+      justify-content: flex-start;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding-top: 12px;
+      padding-bottom: 32px;
+    }
     @media (min-width: 1024px) {
       #screen-landing.active {
-        justify-content: center;
-        overflow-y: auto;
+        justify-content: flex-start;
       }
       .hero { padding: 8px 0 20px; }
     }
@@ -295,7 +301,8 @@
       width: 100%;
       max-width: 960px;
       margin: 0 auto;
-      padding: 0 8px;
+      padding: 8px 8px 0;
+      overflow: visible;
     }
 
     .chaos-scene {
@@ -346,8 +353,10 @@
       align-items: flex-end;
       gap: 4px;
       margin-bottom: 12px;
-      min-height: 64px;
+      min-height: 72px;
+      padding-top: 18px;
       flex-wrap: wrap;
+      overflow: visible;
     }
     .parade-monster {
       animation: paradeBounce 2.2s ease-in-out infinite;
@@ -360,7 +369,7 @@
     }
     @keyframes paradeBounce {
       0%, 100% { transform: translateY(0) scale(1) rotate(var(--tilt, 0deg)); }
-      50% { transform: translateY(-12px) scale(1.08) rotate(calc(var(--tilt, 0deg) + 6deg)); }
+      50% { transform: translateY(-8px) scale(1.06) rotate(calc(var(--tilt, 0deg) + 4deg)); }
     }
 
     .mode-cards { display: grid; grid-template-columns: 1fr; gap: 16px; max-width: 320px; margin: 0 auto; }
@@ -848,6 +857,28 @@
       font-size: 13px;
       text-align: center;
       flex-shrink: 0;
+      line-height: 1.45;
+    }
+    .reveal-insight {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: rgba(255, 144, 0, 0.12);
+      border: 2px solid rgba(255, 144, 0, 0.35);
+      border-radius: 12px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: center;
+      flex-shrink: 0;
+      line-height: 1.45;
+    }
+    .reveal-insight-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-orange);
+      margin-bottom: 6px;
     }
 
     /* Leaderboard */
@@ -1203,7 +1234,7 @@
       <div class="mode-cards">
         <div class="mode-card" id="btn-host" role="button" tabindex="0">
           <div class="mode-card-icon mode-card-monster" id="host-mode-monster"></div>
-          <h2>Host Game</h2>
+          <h2>Start Game</h2>
           <p>Project this screen. Everyone joins on their phones.</p>
         </div>
       </div>
@@ -1335,6 +1366,10 @@
           <div class="reveal-label" id="reveal-label">The real number is…</div>
           <div class="reveal-value" id="reveal-value">—</div>
         </div>
+        <div class="reveal-insight" id="reveal-insight" style="display:none;">
+          <span class="reveal-insight-label">Why this matters</span>
+          <span id="reveal-insight-text"></span>
+        </div>
         <div class="fun-fact" id="fun-fact"></div>
         <div class="guesses-scroll">
           <div class="guesses-grid" id="reveal-guesses-grid"></div>
@@ -1447,6 +1482,10 @@
         <div class="reveal-value" id="player-reveal-value">—</div>
       </div>
       <p id="player-result-msg" style="text-align:center;margin:16px 0;font-size:16px;"></p>
+      <div class="reveal-insight" id="player-reveal-insight" style="display:none;">
+        <span class="reveal-insight-label">Why this matters</span>
+        <span id="player-reveal-insight-text"></span>
+      </div>
       <div class="fun-fact" id="player-fun-fact"></div>
       <div class="status-msg" style="padding:20px;">
         <p class="pulse">Waiting for next question…</p>
@@ -1634,6 +1673,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       answer: 3.94,
       unit: 'percent',
       format: v => v.toFixed(2) + '%',
+      insight: 'Utilization shows how many employees open formal EAP cases — a signal that people trust the program and know where to go for confidential support.',
       funFact: 'Cisco runs ~58% above the Optum book-of-business benchmark of 2.5%.'
     },
     {
@@ -1643,34 +1683,38 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       answer: 23.3,
       unit: 'percent',
       format: v => v.toFixed(1) + '%',
-      funFact: 'Engagement at 23.3% vs utilization at 3.94% shows many employees interact with EAP resources without opening a formal case.'
+      insight: 'Engagement captures website visits, resource downloads, and other touchpoints — helping us see EAP reach before someone needs a full case.',
+      funFact: 'Engagement at 23.3% vs utilization at 3.94% means many employees use EAP resources without opening a formal case.'
     },
     {
       category: 'Wellthy',
-      prompt: 'What is Wellthy\'s engagement rate (trailing 12 months)?',
-      hint: 'Caregiving support platform — single-digit percentage',
-      answer: 6.9,
-      unit: 'percent',
-      format: v => v.toFixed(1) + '%',
-      funFact: 'Wellthy engagement climbed from 6.1% (annual 2025) to 6.9% trailing 12mo with 4,209 engaged lives.'
+      prompt: 'How many employees actively used Wellthy caregiving support in the trailing 12 months?',
+      hint: 'Engaged lives — employees who used the platform; think low four figures',
+      answer: 4209,
+      unit: 'number',
+      format: v => v.toLocaleString(),
+      insight: 'Caregiving is a top driver of absenteeism and burnout — this headcount shows how many employees got hands-on help coordinating care for a loved one.',
+      funFact: '4,209 engaged lives on a sponsored population of 61,328 — up from 3,170 in annual 2025.'
     },
     {
       category: 'Wellthy',
       prompt: 'How many active care projects did Wellthy have in the trailing 12 months (Apr 2025–Mar 2026)?',
-      hint: 'Think hundreds, not thousands — caregiving cases open during the period',
+      hint: 'Open caregiving cases being actively managed — think hundreds, not thousands',
       answer: 816,
       unit: 'number',
       format: v => v.toLocaleString(),
-      funFact: 'Active care projects grew from 611 (annual 2025) to 816 trailing 12mo — a 34% increase in open caregiving support.'
+      insight: 'Active projects measure ongoing, complex care coordination in flight — a leading indicator that employees are getting sustained support, not just a one-time login.',
+      funFact: 'Active care projects grew from 611 (annual 2025) to 816 trailing 12mo — a 34% increase.'
     },
     {
       category: 'RethinkCare',
       prompt: 'How many employees were cumulatively enrolled in RethinkCare by February 2026?',
-      hint: 'Global neurodiversity program — low four figures',
+      hint: 'Global neurodiversity program — launched mid-2025, still ramping; low four figures',
       answer: 4145,
       unit: 'number',
       format: v => v.toLocaleString(),
-      funFact: '4,145 enrolled globally — US leads in volume (2,207) while Canada leads in penetration (7.80% of HC).'
+      insight: 'RethinkCare supports employees and families navigating ADHD, autism, and learning differences — enrollment shows demand for neuro-inclusive benefits in our global workforce.',
+      funFact: '4,145 enrolled globally in just 7 months — US leads in volume (2,207) while Canada leads in penetration (7.80% of HC).'
     }
   ];
 
@@ -1913,7 +1957,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       { text: '1,800', x: 58, y: 58, rot: -8, color: '#02C8FF', size: 22, delay: 0.9 },
       { text: '23.3%', x: 12, y: 62, rot: 18, color: '#0A60FF', size: 24, delay: 0.2 },
       { text: '4,209', x: 38, y: 18, rot: -12, color: '#02C8FF', size: 28, delay: 0.6 },
-      { text: '6.9%', x: 84, y: 48, rot: 20, color: '#FF9000', size: 30, delay: 1.1 },
+      { text: '4,209', x: 84, y: 48, rot: 20, color: '#FF9000', size: 30, delay: 1.1 },
       { text: '2.5%', x: 24, y: 32, rot: 6, color: '#6da8c4', size: 20, delay: 0.5 },
       { text: '816', x: 66, y: 28, rot: -16, color: '#FF9000', size: 32, delay: 0.7 },
       { text: '4.84%', x: 46, y: 72, rot: 10, color: '#0A60FF', size: 26, delay: 1.3 },
@@ -1955,9 +1999,29 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     el.innerHTML = '<span class="dot-live"></span> ' + text;
   }
 
+  /** Player join base URLs — QR/link must be HTTPS GitHub Pages, never file:// or localhost. */
+  const PLAYER_JOIN_BASE_BY_HOST = {
+    'karenhal-blip.github.io': 'https://karenhal-blip.github.io/Metric_Mayhem/',
+    'wwwin-github.cisco.com': 'https://wwwin-github.cisco.com/pages/karenhal/Benefits-Metrics-Game/'
+  };
+  const DEFAULT_PLAYER_JOIN_BASE = 'https://karenhal-blip.github.io/Metric_Mayhem/';
+
+  function getPlayerJoinBase() {
+    const mapped = PLAYER_JOIN_BASE_BY_HOST[location.hostname];
+    if (mapped) return mapped;
+    if (location.protocol === 'file:' ||
+        location.hostname === 'localhost' ||
+        location.hostname === '127.0.0.1') {
+      return DEFAULT_PLAYER_JOIN_BASE;
+    }
+    if (location.protocol === 'https:' || location.protocol === 'http:') {
+      return location.href.split('?')[0].split('#')[0];
+    }
+    return DEFAULT_PLAYER_JOIN_BASE;
+  }
+
   function getJoinUrl(code) {
-    const base = location.href.split('?')[0].split('#')[0];
-    return base + '?room=' + encodeURIComponent(code);
+    return getPlayerJoinBase() + '?room=' + encodeURIComponent(code);
   }
 
   function updateJoinInstructions() {
@@ -2120,6 +2184,18 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     }).join('');
   }
 
+  function showRevealInsight(insight) {
+    const box = $('reveal-insight');
+    const text = $('reveal-insight-text');
+    if (insight) {
+      text.textContent = insight;
+      box.style.display = '';
+    } else {
+      text.textContent = '';
+      box.style.display = 'none';
+    }
+  }
+
   function showQuestion() {
     guesses = {};
     playerSubmitted = false;
@@ -2225,7 +2301,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     document.body.classList.add('reveal-flash');
     setTimeout(() => document.body.classList.remove('reveal-flash'), 700);
     $('reveal-value').textContent = q.format(q.answer);
-    $('fun-fact').textContent = q.funFact;
+    showRevealInsight(q.insight);
+    $('fun-fact').textContent = q.funFact || '';
 
     const grid = $('reveal-guesses-grid');
     grid.innerHTML = results.map(r => {
@@ -2246,6 +2323,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       type: 'reveal',
       answer: q.answer,
       formatted: q.format(q.answer),
+      insight: q.insight,
       funFact: q.funFact,
       results: results.map(r => ({ name: r.name, value: r.value, points: r.points, winner: r.winner })),
       scores
@@ -2579,7 +2657,13 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     }
     if (data.type === 'reveal') {
       $('player-reveal-value').textContent = data.formatted;
-      $('player-fun-fact').textContent = data.funFact;
+      if (data.insight) {
+        $('player-reveal-insight-text').textContent = data.insight;
+        $('player-reveal-insight').style.display = '';
+      } else {
+        $('player-reveal-insight').style.display = 'none';
+      }
+      $('player-fun-fact').textContent = data.funFact || '';
       const mine = data.results.find(r => r.name === playerName);
       if (mine) {
         const msg = mine.winner
